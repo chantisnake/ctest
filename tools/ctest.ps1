@@ -1,6 +1,7 @@
 param (
-    [string] $Command = '',
-    [string] $Path = './'
+    [string] $Path = './',
+    [switch] $Run,
+    [Switch] $Continue
 )
 
 function Get-Files($path = $pwd) 
@@ -195,7 +196,7 @@ function Resume-Test ($path) {
 
 }
 
-function Initialize-Testing ($Path) {
+function Initialize-CTest ($Path) {
 
     Set-Location $Path
 
@@ -223,7 +224,14 @@ function Initialize-Testing ($Path) {
 }
 
 
-Initialize-Testing -Path $path 
-
+if ($Run) {
+    Start-Test -path $Path
+}
+elseif ($Continue) {
+    Resume-Test -path $Path
+}
+else {
+    Initialize-CTest -Path $Path
+}
 
 
