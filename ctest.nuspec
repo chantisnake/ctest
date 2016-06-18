@@ -26,7 +26,7 @@ This is a nuspec. It mostly adheres to https://docs.nuget.org/create/Nuspec-Refe
     <!-- version should MATCH as closely as possible with the underlying software -->
     <!-- Is the version a prerelease of a version? https://docs.nuget.org/create/versioning#creating-prerelease-packages -->
     <!-- Note that unstable versions like 0.0.1 can be considered a released version, but it's possible that one can release a 0.0.1-beta before you release a 0.0.1 version. If the version number is final, that is considered a released version and not a prerelease. -->
-    <version>__REPLACE__</version>
+    <version>1.0</version>
     <!-- <packageSourceUrl>Where is this Chocolatey package located (think GitHub)? packageSourceUrl is highly recommended for the community feed</packageSourceUrl>-->
     <!-- owners is a poor name for maintainers of the package. It sticks around by this name for compatibility reasons. It basically means you. -->
     <!--<owners>__REPLACE_YOUR_NAME__</owners>-->
@@ -34,39 +34,34 @@ This is a nuspec. It mostly adheres to https://docs.nuget.org/create/Nuspec-Refe
 
     <!-- == SOFTWARE SPECIFIC SECTION == -->
     <!-- This section is about the software itself -->
-    <title>ctest (Install)</title>
-    <authors>__REPLACE_AUTHORS_OF_SOFTWARE_COMMA_SEPARATED__</authors>
+    <title>ctest</title>
+    <authors>Chantisnake</authors>
     <!-- projectUrl is required for the community feed -->
-    <projectUrl>https://_Software_Location_REMOVE_OR_FILL_OUT_</projectUrl>
+    <projectUrl>https://github.com/chantisnake/ctest</projectUrl>
     <!--<iconUrl>http://cdn.rawgit.com/__REPLACE_YOUR_REPO__/master/icons/ctest.png</iconUrl>-->
     <!-- <copyright>Year Software Vendor</copyright> -->
     <!-- If there is a license Url available, it is is required for the community feed -->
-    <!-- <licenseUrl>Software License Location __REMOVE_OR_FILL_OUT__</licenseUrl>
-    <requireLicenseAcceptance>true</requireLicenseAcceptance>-->
+    <licenseUrl>https://opensource.org/licenses/GPL-3.0</licenseUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <!--<projectSourceUrl>Software Source Location - is the software FOSS somewhere? Link to it with this</projectSourceUrl>-->
     <!--<docsUrl>At what url are the software docs located?</docsUrl>-->
     <!--<mailingListUrl></mailingListUrl>-->
     <!--<bugTrackerUrl></bugTrackerUrl>-->
-    <tags>ctest admin SPACE_SEPARATED</tags>
-    <summary>__REPLACE__</summary>
-    <description>__REPLACE__MarkDown_Okay </description>
-    <!-- <releaseNotes>__REPLACE_OR_REMOVE__MarkDown_Okay</releaseNotes> -->
-    <!-- =============================== -->      
+    <tags>ctest admin chocolatey</tags>
+    <summary>a light weight and easy to use testing utility for chocolatey packages</summary>
+    <description>
+This is a testing utility for you chocolatey package.
 
-    <!-- Specifying dependencies and version ranges? https://docs.nuget.org/create/versioning#specifying-version-ranges-in-.nuspec-files -->
-    <!--<dependencies>
-      <dependency id="" version="__MINIMUM_VERSION__" />
-      <dependency id="" version="[__EXACT_VERSION__]" />
-      <dependency id="" version="[_MIN_VERSION_INCLUSIVE, MAX_VERSION_INCLUSIVE]" />
-      <dependency id="" version="[_MIN_VERSION_INCLUSIVE, MAX_VERSION_EXCLUSIVE)" />
-      <dependency id="" />
-      <!-- If supporting 0.9.9.x (or below) and including a chocolateyUninstall.ps1 file to uninstall an EXE/MSI, you probably want to uncomment the below lines. Please verify whether you are using a helper function from that package. -->
-      <dependency id="chocolatey-uninstall.extension" />
-    </dependencies>-->
+When you run `ctest`, you need to give it a path.
+Then ctest script will index all the file in that folder recursively.
 
-    <!--<provides>NOT YET IMPLEMENTED</provides>-->
-    <!--<conflicts>NOT YET IMPLEMENTED</conflicts>-->
-    <!--<replaces>NOT YET IMPLEMENTED</replaces>-->
+Then it will match all the `*.nuspec` file and do `choco pack` on the `*.nuspec` file respectively.
+
+Then try to install and uninstall all the packed chocolatey package.
+
+you can find this project at github: [https://github.com/chantisnake/ctest](https://github.com/chantisnake/ctest)
+    </description>
+
   </metadata>
   <files>
     <!-- this section controls what actually gets packaged into the Chocolatey package -->

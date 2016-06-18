@@ -4,6 +4,14 @@ param (
     [Switch] $Continue
 )
 
+function Test-Admin { 
+    $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent() 
+    $principal = new-object System.Security.Principal.WindowsPrincipal($identity) 
+    $admin = [System.Security.Principal.WindowsBuiltInRole]::Administrator 
+    $principal.IsInRole($admin) 
+} 
+
+
 function Get-Files($path = $pwd) 
 { 
     foreach ($item in Get-ChildItem $path)
@@ -35,7 +43,9 @@ function Start-PackTest($packagePath, $packageName) {
     # see if command is successful 
     if ($exitCode -eq 0) {
         Write-Host ''
-        Write-Host "choco pack for package $packageName exit normally with exit code 0" -ForegroundColor Green
+        Write-Host "choco pack for package " -NoNewline -ForegroundColor Green
+        Write-Host $packageName -ForegroundColor Magenta -NoNewline
+        Write-Host " exit normally with exit code 0" -ForegroundColor Green
         $exitOption = Read-Host 'press q to quit, press Enter to continue'
         $exitOption
     }
@@ -64,7 +74,9 @@ function Start-InstallTest ($packagePath ,$packageName) {
     # see if command is successful 
     if ($exitCode -eq 0) {
         Write-Host ''
-        Write-Host "choco install for package $packageName exit normally with exit code 0" -ForegroundColor Green
+        Write-Host "choco install for package " -NoNewline -ForegroundColor Green
+        Write-Host $packageName -ForegroundColor Magenta -NoNewline
+        Write-Host " exit normally with exit code 0" -ForegroundColor Green
         $exitOption = Read-Host 'press q to quit, press Enter to continue'
         $exitOption
     }
@@ -90,7 +102,9 @@ function Start-UninstallTest ($packagePath, $packageName) {
     # see if command is successful 
     if ($exitCode -eq 0) {
         Write-Host ''
-        Write-Host "choco uninstall for package $packageName exit normally with exit code 0" -ForegroundColor Green
+        Write-Host "choco uninstall for package " -NoNewline -ForegroundColor Green
+        Write-Host $packageName -ForegroundColor Magenta -NoNewline
+        Write-Host " exit normally with exit code 0" -ForegroundColor Green
         $exitOption = Read-Host 'press q to quit, press Enter to continue'
         $exitOption
     }
@@ -153,7 +167,7 @@ function Invoke-CTestCore ($infoObject) {
         
 
         # start uninstall test
-        if ($package.Value.install) {
+        if ($package.Value.uninstall) {
             Write-Host 'Package has passed the uninstall test'
         }
         else {
@@ -172,7 +186,19 @@ function Invoke-CTestCore ($infoObject) {
         }  
     }
 
-    Write-Host 'Test finished' -ForegroundColor Magenta
+    Write-Host 'Test finished' -ForegroundColor Green
+
+    Write-Host 'All test is passed, do you want to push?' -ForegroundColor Magenta
+    $option = Read-Host 'Press [Y]es to push, everything else will exit the script'
+    if ($option.ToLower() -eq 'y' -or $option.ToLower() -eq 'yes') {
+        $process = Start-Process -FilePath 'choco.exe' -ArgumentList 'push' -NoNewWindow -Wait -ErrorAction Stop -PassThru
+        if ($process.ExitCode -eq 0) {
+            Write-Host 'push Successful' -ForegroundColor Green
+        }
+        else {
+            Write-Warning 'Push have failed, you may need to mannul push later'
+        }
+    }
 }
 
 function Start-CTest {
@@ -205,7 +231,6 @@ function Start-CTest {
 
     Invoke-CTestCore $infoObject
 
-    Write-Host 'Test finished' -ForegroundColor Magenta
 }
 
 function Resume-CTest {
@@ -257,6 +282,15 @@ function Initialize-AutoCTest{
 
 }
 
+####################################################
+# MAIN
+####################################################
+
+if (-Not (Test-Admin)) {
+    Write-Warning 'You are not running in admin. Your test may fail'
+    Read-Host 'Press Ctrl-C to quit, Press Enter to ignore the warning and continue'
+}
+
 $location = Get-Location
 
 Set-Location $path
@@ -272,5 +306,7 @@ else {
 }
 
 Set-Location $location
+
+Write-Host 'exiting the script. Have a Nice day' -ForegroundColor Green
 
 
