@@ -21,60 +21,56 @@ function Get-Files($path = $pwd)
     } 
 }
 
-function Resolve-ExitCode ($infoDict, $exitCode) {
-
-}
-
-function Start-PackTest ($packagePath) {
+function Start-PackTest($packagePath, $packageName) {
     Write-Host ''
     Write-Host 'starting packing test' -ForegroundColor Magenta
 
-    # get current location
     $location = Get-Location
-
-    # go to package dir
     Set-Location $packagePath
 
     # run command
-    Start-Process -FilePath 'choco.exe' -ArgumentList 'pack' -NoNewWindow -Wait -ErrorAction Stop -PassThru
+    $process = Start-Process -FilePath 'choco.exe' -ArgumentList 'pack' -NoNewWindow -Wait -ErrorAction Stop -PassThru
+    $exitCode = $process.ExitCode
 
     # see if command is successful 
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host 'choco pack exit normally with exit code 0' -ForegroundColor Magenta
+    if ($exitCode -eq 0) {
+        Write-Host ''
+        Write-Host "choco pack for package $packageName exit normally with exit code 0" -ForegroundColor Green
         $exitOption = Read-Host 'press q to quit, press Enter to continue'
         $exitOption
     }
     else {
-        Write-Warning "choco pack fail with exit code $LASTEXITCODE"
+        Write-Host ''
+        Write-Warning "choco pack for package $packageName fail with exit code $exitCode"
         $exitOption = Read-Host 'press q to quit, press Enter to continue'
         $exitOption
     }
 
-    # go back to starting location
     Set-Location $location
+
 }
 
-function Start-InstallTest ($packagePath, $packageName) {
+function Start-InstallTest ($packagePath ,$packageName) {
     Write-Host ''
     Write-Host 'starting install test' -ForegroundColor Magenta
 
-    # get current location
     $location = Get-Location
-
-    # go to package dir
     Set-Location $packagePath
 
     # run command
-    Start-Process -FilePath 'choco.exe' -ArgumentList "install $packageName -fdv -s $pwd" -NoNewWindow -Wait -ErrorAction Stop -PassThru
+    $process = Start-Process -FilePath 'choco.exe' -ArgumentList "install $packageName -fdv -s $pwd" -NoNewWindow -Wait -ErrorAction Stop -PassThru
+    $exitCode = $process.ExitCode
 
     # see if command is successful 
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host 'choco pack exit normally with exit code 0' -ForegroundColor Magenta
+    if ($exitCode -eq 0) {
+        Write-Host ''
+        Write-Host "choco install for package $packageName exit normally with exit code 0" -ForegroundColor Green
         $exitOption = Read-Host 'press q to quit, press Enter to continue'
         $exitOption
     }
     else {
-        Write-Warning "choco pack fail with exit code $LASTEXITCODE"
+        Write-Host ''
+        Write-Warning "choco install for package $packageName fail with exit code $exitCode"
         $exitOption = Read-Host 'press q to quit, press Enter to continue'
         $exitOption
     }
@@ -87,27 +83,99 @@ function Start-UninstallTest ($packagePath, $packageName) {
     Write-Host ''
     Write-Host 'starting uninstall test' -ForegroundColor Magenta
 
-    # go to package dir
-    Set-Location $packagePath
-
     # run command
-    Start-Process -FilePath 'choco.exe' -ArgumentList "uninstall $packageName -debug" -NoNewWindow -Wait -ErrorAction Stop -PassThru
+    $process = Start-Process -FilePath 'choco.exe' -ArgumentList "uninstall $packageName -debug" -NoNewWindow -Wait -ErrorAction Stop -PassThru
+    $exitCode = $process.ExitCode
 
     # see if command is successful 
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host 'choco pack exit normally with exit code 0' -ForegroundColor Magenta
+    if ($exitCode -eq 0) {
+        Write-Host ''
+        Write-Host "choco uninstall for package $packageName exit normally with exit code 0" -ForegroundColor Green
         $exitOption = Read-Host 'press q to quit, press Enter to continue'
         $exitOption
     }
     else {
-        Write-Warning "choco pack fail with exit code $LASTEXITCODE"
+        Write-Host ''
+        Write-Warning "choco uninstall for package $packageName failed with exit code $exitCode"
         $exitOption = Read-Host 'press q to quit, press Enter to ignore the error and continue'
         $exitOption
     }
 
 }
 
-function Start-Test ($path) {
+function Invoke-CTestCore ($infoObject) {
+    foreach ($package in $infoObject.psobject.properties) {
+        # get basic info
+        $packagePath = [System.IO.Path]::GetDirectoryName($package.name)
+        $packageName = [System.IO.Path]::GetFileNameWithoutExtension($package.name)
+
+        Write-Host ''
+        Write-Host 'starting to test package with the name' -ForegroundColor Green
+        Write-Host $packageName -ForegroundColor Green
+
+        # starts packing test
+        if ($package.Value.packed) {
+            Write-Host 'Package has passed the pack test'
+        }
+        else {
+            $exitOption = Start-PackTest -packagePath $packagePath -packageName $packageName
+            # handle exit option
+            if ($exitOption -eq 'q') {
+                # save infoDict and exit
+                $infoObject | ConvertTo-Json > ./ctest_profile
+                Write-Host 'info saved, you can run `ctest <path> -continue` to restore the test' -ForgroundColor Green
+                return
+            }
+            else {
+                # update infoDict
+                $package.Value.packed = $true
+            }
+        }
+        
+        # start installing package
+        if ($package.Value.install) {
+            Write-Host 'Package has passed the install test'
+        }
+        else {
+            $exitOption = Start-InstallTest -packagePath $packagePath -packageName $packageName
+            # handle exit option
+            if ($exitOption -eq 'q') {
+                # save infoDict and exit
+                $infoObject | ConvertTo-Json > ./ctest_profile
+                Write-Host 'info saved, you can run `ctest <path> -continue` to restore the test' -ForgroundColor Green
+                return
+            }
+            else {
+                # update infoDict
+                $package.Value.install = $true
+            }
+        }
+        
+
+        # start uninstall test
+        if ($package.Value.install) {
+            Write-Host 'Package has passed the uninstall test'
+        }
+        else {
+            $exitOption = Start-UninstallTest -packageName $packageName
+            # handle exit option
+            if ($exitOption -eq 'q') {
+                # save infoDict and exit
+                $infoObject | ConvertTo-Json > ./ctest_profile
+                Write-Host 'info saved, you can run `ctest <path> -continue` to restart the test' -ForgroundColor Green
+                return
+            }
+            else {
+                # update infoDict
+                $package.Value.uninstall = $true
+            }
+        }  
+    }
+
+    Write-Host 'Test finished' -ForegroundColor Magenta
+}
+
+function Start-CTest {
 
     Write-Host ''
     Write-Host 'indexing the directory' -ForegroundColor Green
@@ -119,7 +187,7 @@ function Start-Test ($path) {
     $nuspecFiles = $files| where {$_.name -match '.*\.nuspec'}
 
     Write-Host ''
-    Write-Host 'here is all the nuspec file I have found' -ForegroundColor Magenta
+    Write-Host 'here is all the nuspec file I have found' -ForegroundColor Green
     Write-Host $nuspecFiles -ForegroundColor Magenta
     Write-Host 'we will start testing with all these files'
     Read-Host 'Press Enter to Continue'
@@ -127,111 +195,82 @@ function Start-Test ($path) {
     Write-Host ''
     Write-Host 'initializing test' -ForegroundColor Magenta
     $default = @{'packed' = $false; 'install'= $false; 'uninstall'=$false}
-    $infoDict = @{}
+
+    # creating info object
+    $infoObject = New-Object -TypeName psobject
     foreach ($file in $nuspecFiles) {
-        $infoDict.Add($file.FullName, $default)
+        Add-Member -InputObject $infoObject -MemberType NoteProperty -Name $file.FullName -Value $default
     }
-    Write-Host 'infoDict is initiated' -ForegroundColor Magenta
+    Write-Host 'infoObject is initiated' -ForegroundColor Magenta
 
-    foreach ($package in $infoDict.GetEnumerator()) {
-        # get basic info
-        $packagePath = [System.IO.Path]::GetDirectoryName($package.name)
-        $packageName = [System.IO.Path]::GetFileNameWithoutExtension($package.name)
-
-        Write-Host ''
-        Write-Host 'starting to test package with the path' -ForegroundColor Magenta
-        Write-Host $packageName -ForegroundColor Magenta
-
-        # starts packing test
-        $exitOption = Start-PackTest -packagePath $packagePath
-        # handle exit option
-        if ($exitOption -eq 'q') {
-            # save infoDict and exit
-            $infoDict | ConvertTo-Json > ./ctest_profile
-            Write-Host 'info saved, you can run `ctest -command continue` to restart the test' -ForgroundColor Green
-            exit
-        }
-        else {
-            # update infoDict
-            $package.Value.packed = $true
-            $infoDict.Set_Item($package.Name, $package.Value)
-        }
-
-        # start installing package
-        $exitOption = Start-InstallTest -packagePath $packagePath -packageName $packageName
-        # handle exit option
-        if ($exitOption -eq 'q') {
-            # save infoDict and exit
-            $infoDict | ConvertTo-Json > ./ctest_profile
-            Write-Host 'info saved, you can run `ctest -command continue` to restart the test' -ForgroundColor Green
-            exit
-        }
-        else {
-            # update infoDict
-            $package.Value.install = $true
-            $infoDict.Set_Item($package.Name, $package.Value)
-        }
-
-        # start uninstall test
-        $exitOption = Start-UninstallTest -packageName $packageName
-        # handle exit option
-        if ($exitOption -eq 'q') {
-            # save infoDict and exit
-            $infoDict | ConvertTo-Json > ./ctest_profile
-            Write-Host 'info saved, you can run `ctest -command continue` to restart the test' -ForgroundColor Green
-            exit
-        }
-        else {
-            # update infoDict
-            $package.Value.uninstall = $true
-            $infoDict.Set_Item($package.Name, $package.Value)
-        }
-    }
+    Invoke-CTestCore $infoObject
 
     Write-Host 'Test finished' -ForegroundColor Magenta
 }
 
-function Resume-Test ($path) {
+function Resume-CTest {
+
+    # reading the infoDict
+    Write-Host 'Reading the old profile'
+    $infoObject = Get-Content ./ctest_profile | ConvertFrom-Json
     
+    Invoke-CTestCore -infoObject $infoObject
 
 }
 
-function Initialize-CTest ($Path) {
+function Initialize-ResumedCTest {
 
-    Set-Location $Path
+    Write-Host 'Trying to find the old Profile'
+    if (-Not (Test-Path ./ctest_profile)) {
+        Write-Warning 'previous ctest profile not found.' 
+        Write-Warning 'Starting a new test'
+        Start-CTest
+    }
+    else {
+        Write-Host 'old Profile found'
+        Resume-CTest 
+    }
+}
+
+function Initialize-AutoCTest{
 
     if(Test-Path ./ctest_profile) {
         Write-Host 'found the old test profile' -ForegroundColor Magenta
         Write-Host 'Do you want to continue the old test?' -ForegroundColor Magenta
         $option = Read-Host 'enter [Y]es for continue else we will start a new test'
-        if ($option.ToLower -match 'y.*') {
+        if ($option.ToLower -eq 'yes' -or $option.ToLower() -eq 'y') {
             Write-Host 'continue the old test' -ForgroundColor Magenta
-            Resume-Test -path $path
+            Resume-CTest
         }
         else {
             Write-Host 'removing the old test profile' -ForegroundColor Magenta
             Remove-Item ./ctest_profile
             Write-Host 'starting a new test' -ForgroundColor Magenta
-            Start-Test -path $path
+            Start-CTest
         }
     }
     else {
         Write-Host 'cannot find the old test profile' -ForegroundColor Magenta
         Write-Host 'starting a new test' -ForegroundColor Magenta
-        Start-Test -path $path
+        Start-CTest
     }
 
 }
 
+$location = Get-Location
+
+Set-Location $path
 
 if ($Run) {
-    Start-Test -path $Path
+    Start-CTest
 }
 elseif ($Continue) {
-    Resume-Test -path $Path
+    Initialize-ResumedCTest
 }
 else {
-    Initialize-CTest -Path $Path
+    Initialize-AutoCTest
 }
+
+Set-Location $location
 
 
