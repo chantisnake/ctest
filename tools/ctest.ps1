@@ -117,6 +117,19 @@ function Start-UninstallTest ($packagePath, $packageName) {
 
 }
 
+function Start-ChocoPush ($packagePath) {
+    $location = Get-Location
+    Set-Location $packagePath
+    $process = Start-Process -FilePath 'choco.exe' -ArgumentList 'push' -NoNewWindow -Wait -ErrorAction Stop -PassThru
+    if ($process.ExitCode -eq 0) {
+        Write-Host 'push Successful' -ForegroundColor Green
+    }
+    else {
+        Write-Warning 'Push have failed, you may need to mannul push later'
+    }
+    Set-Location $location
+}
+
 function Invoke-CTestCore ($infoObject) {
     foreach ($package in $infoObject.psobject.properties) {
         # get basic info
@@ -191,13 +204,7 @@ function Invoke-CTestCore ($infoObject) {
     Write-Host 'All test is passed, do you want to push?' -ForegroundColor Magenta
     $option = Read-Host 'Press [Y]es to push, everything else will exit the script'
     if ($option.ToLower() -eq 'y' -or $option.ToLower() -eq 'yes') {
-        $process = Start-Process -FilePath 'choco.exe' -ArgumentList 'push' -NoNewWindow -Wait -ErrorAction Stop -PassThru
-        if ($process.ExitCode -eq 0) {
-            Write-Host 'push Successful' -ForegroundColor Green
-        }
-        else {
-            Write-Warning 'Push have failed, you may need to mannul push later'
-        }
+        Start-ChocoPush -packagePath $packagePath
     }
 }
 
