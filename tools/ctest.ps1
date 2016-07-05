@@ -1,6 +1,6 @@
 param (
     [string] $Path = './',
-    [switch] $pre
+    [switch] $pre,
     [switch] $Run,
     [Switch] $Continue
 )
@@ -212,6 +212,13 @@ function Invoke-CTestCore ($infoObject) {
     if ($option.ToLower() -eq 'y' -or $option.ToLower() -eq 'yes') {
         Start-ChocoPush -packagePath $packagePath
     }
+
+    Write-Host 'do you want to reinstall the package in case you need to use it?' 
+    $option = Read-Host 'press enter to reinstall, input q to exit'
+    if ($option.ToLower() -eq 'q' -or $option.ToLower() -eq 'quit') {
+         Start-InstallTest -packagePath $packagePath -packageName $packageName
+    }
+
 }
 
 function Start-CTest {
