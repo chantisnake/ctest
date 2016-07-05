@@ -1,5 +1,6 @@
 param (
     [string] $Path = './',
+    [switch] $pre
     [switch] $Run,
     [Switch] $Continue
 )
@@ -68,7 +69,12 @@ function Start-InstallTest ($packagePath ,$packageName) {
     Set-Location $packagePath
 
     # run command
-    $process = Start-Process -FilePath 'choco.exe' -ArgumentList "install $packageName -fdv -s $pwd" -NoNewWindow -Wait -ErrorAction Stop -PassThru
+    if($pre){
+        $process = Start-Process -FilePath 'choco.exe' -ArgumentList "install $packageName -fdv -s $pwd -pre" -NoNewWindow -Wait -ErrorAction Stop -PassThru
+    }
+    else {
+        $process = Start-Process -FilePath 'choco.exe' -ArgumentList "install $packageName -fdv -s $pwd" -NoNewWindow -Wait -ErrorAction Stop -PassThru
+    }
     $exitCode = $process.ExitCode
 
     # see if command is successful 
